@@ -203,12 +203,15 @@ export const response = (
         result &&
         typeof result === 'object'
       ) {
+        // 안전한 응답 추출 (supertest response 객체 등 처리)
+        const safeResult = extractSafeResponse(result);
+
         // 실제 응답을 기반으로 스키마 생성
-        const capturedSchema = generateSchemaFromResponse(result);
+        const capturedSchema = generateSchemaFromResponse(safeResult);
         const capturedContent = {
           'application/json': {
             schema: capturedSchema,
-            example: result,
+            example: safeResult,
           },
         };
 
@@ -232,7 +235,7 @@ export const response = (
         addApiSpec(updatedSpecSnapshot);
 
         console.log(
-          `📸 Captured response for ${statusCode}: ${JSON.stringify(result).substring(0, 100)}...`,
+          `📸 Captured response for ${statusCode}: ${JSON.stringify(safeResult).substring(0, 100)}...`,
         );
       }
     }
@@ -245,6 +248,100 @@ export const response = (
 export const jsonContent = (schema: Schema, example?: any) => ({
   'application/json': { schema, example },
 });
+
+/**
+ * 안전한 응답 추출 (supertest response, axios response 등 처리)
+ */
+function extractSafeResponse(response: any): any {
+  // supertest response 객체인 경우
+  if (response && typeof response === 'object') {
+    // body 속성이 있으면 body만 사용
+    if (response.body !== undefined) {
+      return response.body;
+    }
+
+    // data 속성이 있으면 data 사용 (axios response)
+    if (response.data !== undefined) {
+      return response.data;
+    }
+
+    // status, statusCode 등이 있으면 HTTP response 객체로 간주
+    if (response.status !== undefined || response.statusCode !== undefined) {
+      return {
+        status: response.status || response.statusCode,
+        data: response.body || response.data,
+        headers: extractSafeHeaders(response.headers),
+      };
+    }
+  }
+
+  // 일반 객체면 그대로 반환 (하지만 순환 참조 제거)
+  return removeBrowserObjects(response);
+}
+
+/**
+ * 안전한 헤더 추출
+ */
+function extractSafeHeaders(headers: any): any {
+  if (!headers || typeof headers !== 'object') return {};
+
+  const safeHeaders: { [key: string]: any } = {};
+  Object.keys(headers).forEach((key) => {
+    const value = headers[key];
+    if (typeof value === 'string' || typeof value === 'number') {
+      safeHeaders[key] = value;
+    }
+  });
+
+  return safeHeaders;
+}
+
+/**
+ * 브라우저/Node.js 특정 객체들 제거
+ */
+function removeBrowserObjects(obj: any): any {
+  if (obj === null || obj === undefined) return obj;
+
+  const type = typeof obj;
+  if (type !== 'object') return obj;
+
+  // 순환 참조나 브라우저 객체들 필터링
+  const dangerousKeys = [
+    'req',
+    'request',
+    'socket',
+    'connection',
+    'agent',
+    'xhr',
+    '_httpMessage',
+    'res',
+    'response',
+    'client',
+    'parser',
+  ];
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => removeBrowserObjects(item));
+  }
+
+  const cleaned: { [key: string]: any } = {};
+  Object.keys(obj).forEach((key) => {
+    if (!dangerousKeys.includes(key) && !key.startsWith('_')) {
+      try {
+        const value = obj[key];
+        if (value !== null && typeof value === 'object') {
+          // 간단한 순환 참조 체크
+          if (value === obj) return; // self reference
+        }
+        cleaned[key] = removeBrowserObjects(value);
+      } catch (error) {
+        // 접근할 수 없는 속성은 건너뛰기
+      }
+    }
+  });
+
+  return cleaned;
+}
 
 /**
  * 응답 데이터로부터 자동으로 스키마 생성 (순환 참조 방지)
