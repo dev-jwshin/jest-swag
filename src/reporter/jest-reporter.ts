@@ -43,7 +43,6 @@ export default class JestSwagReporter {
   onRunStart(): void {
     // Clear any existing specs at the start
     clearApiSpecs();
-    console.log('🚀 Starting jest-swag documentation generation...');
   }
 
   onTestResult(test: Test, testResult: TestResult): void {
@@ -61,9 +60,6 @@ export default class JestSwagReporter {
       const allSpecs = [...apiSpecs, ...fileSpecs];
 
       if (allSpecs.length === 0) {
-        console.log(
-          '⚠️  No API specs found. Make sure your tests are using jest-swag DSL functions.',
-        );
         return;
       }
 
@@ -71,24 +67,12 @@ export default class JestSwagReporter {
       clearApiSpecs();
       allSpecs.forEach((spec) => apiSpecs.push(spec));
 
-      console.log(
-        `📝 Found ${allSpecs.length} API spec(s). Generating OpenAPI documentation...`,
-      );
-
       // Generate the OpenAPI document
       const document = await this.generator.generate();
 
-      console.log('✅ OpenAPI documentation generated successfully!');
-      console.log(
-        `   - Endpoints documented: ${Object.keys(document.paths).length}`,
-      );
-      console.log(`   - Total operations: ${allSpecs.length}`);
-
       // Optionally generate additional formats or serve UI
       await this.generateAdditionalOutputs(document);
-    } catch (error) {
-      console.error('❌ Failed to generate OpenAPI documentation:', error);
-    }
+    } catch (error) {}
   }
 
   private async generateAdditionalOutputs(document: any): Promise<void> {
@@ -102,17 +86,13 @@ export default class JestSwagReporter {
       if (this.shouldGenerateYaml()) {
         const yaml = this.convertToYaml(document);
         fs.writeFileSync(yamlPath, yaml);
-        console.log(`   - YAML version: ${yamlPath}`);
       }
 
       // Generate HTML documentation
       const htmlPath = path.join(outputDir, 'index.html');
       const htmlContent = this.generateSwaggerUI(document);
       fs.writeFileSync(htmlPath, htmlContent);
-      console.log(`   - Swagger UI: ${htmlPath}`);
-    } catch (error) {
-      console.warn('⚠️  Failed to generate additional outputs:', error);
-    }
+    } catch (error) {}
   }
 
   private shouldGenerateYaml(): boolean {

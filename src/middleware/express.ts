@@ -103,15 +103,7 @@ export function swaggerUI(options: SwaggerUIOptions = {}) {
 export function setupSwagger(app: Application, options: SwaggerUIOptions = {}) {
   const { routePrefix = '/api-docs' } = options;
 
-  console.log(`📖 Setting up Swagger UI at ${routePrefix}`);
   app.use(routePrefix, swaggerUI(options));
-
-  // Log the URL in development
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(
-      `🚀 Swagger UI available at http://localhost:3000${routePrefix}`,
-    );
-  }
 }
 
 /**

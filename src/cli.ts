@@ -58,12 +58,9 @@ program
           const fileConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
           config = { ...config, ...fileConfig };
         } else {
-          console.error(`❌ Configuration file not found: ${configPath}`);
           process.exit(1);
         }
       }
-
-      console.log('🚀 Generating OpenAPI documentation...');
 
       // For CLI usage, we need to load specs from a temporary file
       // This would typically be saved by the Jest reporter
@@ -75,24 +72,12 @@ program
       }
 
       if (apiSpecs.length === 0) {
-        console.log(
-          '⚠️  No API specs found. Run your Jest tests first to collect API specifications.',
-        );
-        console.log(
-          '   Example: npm test -- --reporters=jest-swag/dist/reporter.js',
-        );
         return;
       }
 
       const generator = new OpenAPIGenerator(config);
       const document = await generator.generate();
-
-      console.log('✅ OpenAPI documentation generated successfully!');
-      console.log(`   - Output: ${config.outputPath}`);
-      console.log(`   - Endpoints: ${Object.keys(document.paths).length}`);
-      console.log(`   - Operations: ${apiSpecs.length}`);
     } catch (error) {
-      console.error('❌ Failed to generate documentation:', error);
       process.exit(1);
     }
   });
@@ -138,15 +123,8 @@ program
         }
       });
 
-      app.listen(port, () => {
-        console.log(
-          `📖 Documentation server running at http://localhost:${port}`,
-        );
-        console.log(`   - OpenAPI JSON: http://localhost:${port}/openapi.json`);
-        console.log(`   - Swagger UI: http://localhost:${port}/`);
-      });
+      app.listen(port, () => {});
     } catch (error) {
-      console.error('❌ Failed to start documentation server:', error);
       process.exit(1);
     }
   });

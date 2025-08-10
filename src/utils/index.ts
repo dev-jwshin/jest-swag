@@ -85,9 +85,7 @@ export const clearApiSpecs = (): void => {
 export const saveSpecsToFile = (): void => {
   try {
     fs.writeFileSync(SPECS_FILE, JSON.stringify(apiSpecs, null, 2));
-  } catch (error) {
-    console.warn('Failed to save API specs to file:', error);
-  }
+  } catch (error) {}
 };
 
 export const loadSpecsFromFile = (): ApiSpec[] => {
@@ -96,8 +94,6 @@ export const loadSpecsFromFile = (): ApiSpec[] => {
       const data = fs.readFileSync(SPECS_FILE, 'utf8');
       return JSON.parse(data);
     }
-  } catch (error) {
-    console.warn('Failed to load API specs from file:', error);
-  }
+  } catch (error) {}
   return [];
 };

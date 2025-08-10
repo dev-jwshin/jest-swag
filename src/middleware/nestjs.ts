@@ -15,9 +15,6 @@ export function createJestSwagModule() {
 
     return { Module, Controller, Get, Res, Req, isAvailable: true };
   } catch (error) {
-    console.warn(
-      'NestJS not available. JestSwagModule requires @nestjs/common as a peer dependency.',
-    );
     return { isAvailable: false };
   }
 }
@@ -183,13 +180,13 @@ class JestSwagModuleClass {
             if (initialized) return;
             
             if (typeof SwaggerUIBundle === 'undefined') {
-                console.log('⏳ Waiting for SwaggerUIBundle...');
+
                 setTimeout(initSwagger, 200);
                 return;
             }
             
             try {
-                console.log('🚀 Initializing SwaggerUI...');
+
                 
                 // Simplified configuration
                 const config = {
@@ -207,14 +204,13 @@ class JestSwagModuleClass {
                     docExpansion: 'list'
                 };
                 
-                console.log('📋 Config URL:', config.url);
+
                 
                 const ui = SwaggerUIBundle(config);
                 initialized = true;
-                console.log('✅ SwaggerUI initialized successfully');
+
             } catch (error) {
-                console.error('❌ SwaggerUI initialization failed:', error);
-                console.error('Full error:', error.stack);
+
             }
         }
         
@@ -249,14 +245,6 @@ class JestSwagModuleClass {
     Object.defineProperty(JestSwagDynamicController, 'name', {
       value: `JestSwagController_${routePath.replace(/[^a-zA-Z0-9]/g, '_')}`,
     });
-
-    console.log(`📖 Setting up Jest Swag UI at /${routePath}`);
-
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(
-        `🚀 Swagger UI will be available at http://localhost:3000/${routePath}`,
-      );
-    }
 
     return {
       module: JestSwagModuleClass,

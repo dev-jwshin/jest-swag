@@ -233,10 +233,6 @@ export const response = (
           responses: { ...currentApiSpec.responses },
         };
         addApiSpec(updatedSpecSnapshot);
-
-        console.log(
-          `📸 Captured response for ${statusCode}: ${JSON.stringify(safeResult).substring(0, 100)}...`,
-        );
       }
     }
   });
@@ -430,10 +426,7 @@ function generateSchemaFromResponse(
         }
       } catch (error: any) {
         // 에러가 발생한 속성은 건너뛰기
-        console.warn(
-          `Failed to process property '${key}':`,
-          error?.message || 'Unknown error',
-        );
+
         properties[key] = { type: 'string', description: 'Processing failed' };
       }
     });

@@ -155,8 +155,6 @@ export class OpenAPIGenerator {
 
     // Write JSON file
     fs.writeFileSync(outputPath, JSON.stringify(doc, null, 2));
-
-    console.log(`OpenAPI document generated: ${outputPath}`);
   }
 
   /**
