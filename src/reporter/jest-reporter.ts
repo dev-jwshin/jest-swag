@@ -83,6 +83,9 @@ export default class JestSwagReporter {
 
       // Optionally generate additional formats or serve UI
       await this.generateAdditionalOutputs(document);
+
+      // 문서 생성 완료 후 임시 스펙 파일 정리
+      this.cleanupTempFiles();
     } catch (error) {}
   }
 
@@ -190,6 +193,20 @@ ${this.convertPathsToYaml(document.paths)}`;
     </script>
 </body>
 </html>`;
+  }
+
+  private cleanupTempFiles(): void {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const tempSpecFile = path.resolve('./.jest-swag-specs.json');
+
+      if (fs.existsSync(tempSpecFile)) {
+        fs.unlinkSync(tempSpecFile);
+      }
+    } catch (error) {
+      // 파일 삭제 실패는 무시 (큰 문제 아님)
+    }
   }
 }
 
