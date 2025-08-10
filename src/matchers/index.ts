@@ -136,11 +136,17 @@ export const response = (
 
   if (typeof options === 'function') {
     // Old signature: response(200, 'desc', callback)
+    // 콜백이 있으면 자동으로 응답 캡처 활성화
     testCallback = options;
+    responseOptions = { captureResponse: true };
   } else if (typeof options === 'object') {
     // New signature: response(200, 'desc', { content, headers }, callback)
     responseOptions = options;
     testCallback = callback;
+    // 콜백이 있으면 자동으로 응답 캡처 활성화
+    if (testCallback && !responseOptions.captureResponse) {
+      responseOptions.captureResponse = true;
+    }
   }
 
   const responseObj: Response = {
@@ -299,7 +305,8 @@ function generateSchemaFromResponse(data: any): Schema {
  * Helper to create common schemas
  */
 /**
- * 실제 응답을 캡처하는 헬퍼 함수
+ * 실제 응답을 캡처하는 헬퍼 함수 (더 이상 필요하지 않음 - 자동으로 처리됨)
+ * @deprecated 이제 response() 함수에서 콜백이 있으면 자동으로 응답을 캡처합니다
  */
 export const captureResponse = () => ({ captureResponse: true });
 

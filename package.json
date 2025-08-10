@@ -1,6 +1,6 @@
 {
   "name": "@foryourdev/jest-swag",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Generate OpenAPI/Swagger documentation from your Jest API tests",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
