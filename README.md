@@ -284,7 +284,7 @@ import {
   response,
   jsonContent,
   schemas,
-} from 'jest-swag';
+} from '@foryourdev/jest-swag';
 
 describe('Users API', () => {
   path('/users', () => {
@@ -388,7 +388,7 @@ After running tests and starting your server:
 ### Path Operations
 
 ```typescript
-import { path, get, post, put, patch, del } from 'jest-swag';
+import { path, get, post, put, patch, del } from '@foryourdev/jest-swag';
 
 path('/users', () => {
   get('Get users', () => {
@@ -412,7 +412,7 @@ path('/users', () => {
 ### Parameters
 
 ```typescript
-import { parameter, schemas } from 'jest-swag';
+import { parameter, schemas } from '@foryourdev/jest-swag';
 
 parameter({
   name: 'userId',
@@ -432,7 +432,7 @@ parameter({
 ### Request Bodies
 
 ```typescript
-import { requestBody, jsonContent, schemas } from 'jest-swag';
+import { requestBody, jsonContent, schemas } from '@foryourdev/jest-swag';
 
 requestBody({
   description: 'User data',
@@ -452,7 +452,7 @@ requestBody({
 ### Response Definitions
 
 ```typescript
-import { response } from 'jest-swag';
+import { response } from '@foryourdev/jest-swag';
 
 response(200, 'Success', () => {
   // Your test assertions here
@@ -466,7 +466,7 @@ response(500, 'Internal server error');
 ### Schema Helpers
 
 ```typescript
-import { schemas } from 'jest-swag';
+import { schemas } from '@foryourdev/jest-swag';
 
 // Basic types
 schemas.string('example');
@@ -498,7 +498,7 @@ module.exports = {
   reporters: [
     'default',
     [
-      'jest-swag/dist/reporter.js',
+      '@foryourdev/jest-swag/dist/reporter.js',
       {
         title: 'My API Documentation',
         version: '1.0.0',
@@ -518,13 +518,13 @@ module.exports = {
 
 ```bash
 # Generate documentation from saved specs
-npx jest-swag generate --title "My API" --version "2.0.0" --output ./docs/api.json
+npx @foryourdev/jest-swag generate --title "My API" --version "2.0.0" --output ./docs/api.json
 
 # Serve documentation
-npx jest-swag serve --port 3001 --docs ./docs
+npx @foryourdev/jest-swag serve --port 3001 --docs ./docs
 
 # Generate with config file
-npx jest-swag generate --config ./jest-swag.config.json
+npx @foryourdev/jest-swag generate --config ./jest-swag.config.json
 ```
 
 ## 📄 Configuration File
@@ -557,10 +557,10 @@ Add these scripts to your `package.json`:
 ```json
 {
   "scripts": {
-    "test": "jest --reporters=default --reporters=jest-swag/dist/reporter.js",
-    "test:docs": "jest --reporters=jest-swag/dist/reporter.js",
-    "docs:generate": "jest-swag generate",
-    "docs:serve": "jest-swag serve"
+    "test": "jest --reporters=default --reporters=@foryourdev/jest-swag/dist/reporter.js",
+    "test:docs": "jest --reporters=@foryourdev/jest-swag/dist/reporter.js",
+    "docs:generate": "@foryourdev/jest-swag generate",
+    "docs:serve": "@foryourdev/jest-swag serve"
   }
 }
 ```

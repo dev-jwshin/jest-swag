@@ -169,8 +169,18 @@ class JestSwagModuleClass {
 
     const routePath = options.path || 'api-docs';
 
-    // Create controller with custom route
-    const DynamicController = Controller(routePath)(JestSwagController);
+    // Create a properly named controller class
+    @Controller(routePath)
+    class JestSwagDynamicController extends JestSwagController {
+      constructor() {
+        super(options);
+      }
+    }
+
+    // Set a proper class name for better debugging
+    Object.defineProperty(JestSwagDynamicController, 'name', {
+      value: `JestSwagController_${routePath.replace(/[^a-zA-Z0-9]/g, '_')}`,
+    });
 
     console.log(`📖 Setting up Jest Swag UI at /${routePath}`);
 
@@ -182,15 +192,11 @@ class JestSwagModuleClass {
 
     return {
       module: JestSwagModuleClass,
-      controllers: [DynamicController],
+      controllers: [JestSwagDynamicController],
       providers: [
         {
           provide: 'JEST_SWAG_OPTIONS',
           useValue: options,
-        },
-        {
-          provide: JestSwagController,
-          useFactory: () => new JestSwagController(options),
         },
       ],
     };
