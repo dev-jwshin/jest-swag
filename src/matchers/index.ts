@@ -113,6 +113,7 @@ export const response = (
         headers?: {
           [headerName: string]: { description?: string; schema: Schema };
         };
+        captureResponse?: boolean; // 자동 응답 캡처 옵션
       }
     | (() => void),
   callback?: () => void,
@@ -128,6 +129,7 @@ export const response = (
         headers?: {
           [headerName: string]: { description?: string; schema: Schema };
         };
+        captureResponse?: boolean;
       }
     | undefined;
   let testCallback: (() => void) | undefined;
@@ -184,10 +186,49 @@ export const response = (
     addApiSpec(specSnapshot);
   }
 
-  it(`responds with ${statusCode}`, () => {
+  it(`responds with ${statusCode}`, async () => {
     // Test logic can go here
     if (testCallback) {
-      testCallback();
+      const result = await testCallback();
+
+      // 응답 캡처 기능
+      if (
+        responseOptions?.captureResponse &&
+        result &&
+        typeof result === 'object'
+      ) {
+        // 실제 응답을 기반으로 스키마 생성
+        const capturedSchema = generateSchemaFromResponse(result);
+        const capturedContent = {
+          'application/json': {
+            schema: capturedSchema,
+            example: result,
+          },
+        };
+
+        // 기존 응답 업데이트
+        const updatedResponse: Response = {
+          description: desc,
+          content: capturedContent,
+          ...(responseOptions?.headers && { headers: responseOptions.headers }),
+        };
+
+        if (!currentApiSpec.responses) {
+          currentApiSpec.responses = {};
+        }
+        currentApiSpec.responses[responseKey] = updatedResponse;
+
+        // 업데이트된 스펙 저장
+        const updatedSpecSnapshot = {
+          ...specSnapshot,
+          responses: { ...currentApiSpec.responses },
+        };
+        addApiSpec(updatedSpecSnapshot);
+
+        console.log(
+          `📸 Captured response for ${statusCode}: ${JSON.stringify(result).substring(0, 100)}...`,
+        );
+      }
     }
   });
 };
@@ -200,8 +241,68 @@ export const jsonContent = (schema: Schema, example?: any) => ({
 });
 
 /**
+ * 응답 데이터로부터 자동으로 스키마 생성
+ */
+function generateSchemaFromResponse(data: any): Schema {
+  if (data === null) return { type: 'null' };
+  if (data === undefined) return {};
+
+  const type = typeof data;
+
+  if (type === 'boolean') {
+    return { type: 'boolean', example: data };
+  }
+
+  if (type === 'number') {
+    return {
+      type: Number.isInteger(data) ? 'integer' : 'number',
+      example: data,
+    };
+  }
+
+  if (type === 'string') {
+    return { type: 'string', example: data };
+  }
+
+  if (Array.isArray(data)) {
+    const items = data.length > 0 ? generateSchemaFromResponse(data[0]) : {};
+    return {
+      type: 'array',
+      items,
+      example: data,
+    };
+  }
+
+  if (type === 'object') {
+    const properties: { [key: string]: Schema } = {};
+    const required: string[] = [];
+
+    Object.keys(data).forEach((key) => {
+      properties[key] = generateSchemaFromResponse(data[key]);
+      if (data[key] !== null && data[key] !== undefined) {
+        required.push(key);
+      }
+    });
+
+    return {
+      type: 'object',
+      properties,
+      required: required.length > 0 ? required : undefined,
+      example: data,
+    };
+  }
+
+  return {};
+}
+
+/**
  * Helper to create common schemas
  */
+/**
+ * 실제 응답을 캡처하는 헬퍼 함수
+ */
+export const captureResponse = () => ({ captureResponse: true });
+
 export const schemas = {
   string: (example?: string): Schema => ({ type: 'string', example }),
   number: (example?: number): Schema => ({ type: 'number', example }),
