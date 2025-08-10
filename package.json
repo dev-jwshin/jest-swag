@@ -1,5 +1,5 @@
 {
-  "name": "jest-swag",
+  "name": "@foryourdev/jest-swag",
   "version": "1.0.0",
   "description": "Generate OpenAPI/Swagger documentation from your Jest API tests",
   "main": "dist/index.js",
@@ -38,13 +38,13 @@
     "email": "your.email@example.com"
   },
   "license": "MIT",
-  "homepage": "https://github.com/yourusername/jest-swag#readme",
+  "homepage": "https://github.com/dev-jwshin/jest-swag#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/jest-swag.git"
+    "url": "git+https://github.com/dev-jwshin/jest-swag.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/jest-swag/issues"
+    "url": "https://github.com/dev-jwshin/jest-swag/issues"
   },
   "dependencies": {
     "swagger-ui-dist": "^5.10.5",
