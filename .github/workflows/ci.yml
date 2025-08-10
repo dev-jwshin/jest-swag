@@ -1,0 +1,134 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test and Build
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [20.x, 22.x]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build package
+        run: npm run build
+        
+      - name: Upload build artifacts
+        if: matrix.node-version == '20.x'
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-files
+          path: dist/
+
+  publish:
+    name: Publish to NPM
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # 전체 git 히스토리를 가져와서 버전 비교 가능
+          fetch-depth: 0
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build package
+        run: npm run build
+        
+      - name: Get package version
+        id: package-version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Package version: $VERSION"
+          
+      - name: Check if version exists on NPM
+        id: check-version
+        run: |
+          PACKAGE_NAME=$(node -p "require('./package.json').name")
+          VERSION=${{ steps.package-version.outputs.version }}
+          
+          # NPM에서 해당 버전이 존재하는지 확인
+          if npm view $PACKAGE_NAME@$VERSION version 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Version $VERSION already exists on NPM"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Version $VERSION does not exist on NPM, ready to publish"
+          fi
+          
+      - name: Publish to NPM
+        if: steps.check-version.outputs.exists == 'false'
+        run: |
+          echo "Publishing version ${{ steps.package-version.outputs.version }} to NPM..."
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          
+      - name: Skip publishing (version exists)
+        if: steps.check-version.outputs.exists == 'true'
+        run: |
+          echo "⚠️  Version ${{ steps.package-version.outputs.version }} already exists on NPM"
+          echo "💡 패키지를 업데이트하려면 package.json의 version을 변경해주세요"
+          echo "📝 Semantic Versioning을 따라 버전을 업데이트하세요:"
+          echo "   - 패치: x.x.X (버그 수정)"
+          echo "   - 마이너: x.X.x (새 기능 추가)"  
+          echo "   - 메이저: X.x.x (호환성 없는 변경)"
+
+  notify:
+    name: Notify Results
+    needs: [test, publish]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Notify Success
+        if: needs.test.result == 'success' && (needs.publish.result == 'success' || needs.publish.result == 'skipped')
+        run: |
+          echo "✅ CI/CD Pipeline completed successfully!"
+          if [ "${{ needs.publish.result }}" == "success" ]; then
+            echo "📦 Package published to NPM"
+          else
+            echo "📦 Package publishing skipped (version already exists)"
+          fi
+          
+      - name: Notify Failure
+        if: needs.test.result == 'failure' || needs.publish.result == 'failure'
+        run: |
+          echo "❌ CI/CD Pipeline failed!"
+          if [ "${{ needs.test.result }}" == "failure" ]; then
+            echo "🔴 Tests failed"
+          fi
+          if [ "${{ needs.publish.result }}" == "failure" ]; then
+            echo "🔴 Publishing failed"
+          fi
+          exit 1
