@@ -1,0 +1,58 @@
+# Development files
+src/
+test/
+*.test.ts
+*.spec.ts
+
+# Build tools
+tsconfig.json
+jest.config.js
+jest-swag.config.json
+
+# Documentation (keep README.md)
+docs/
+.jest-swag-specs.json
+
+# Development dependencies
+node_modules/
+.npmrc
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# CI/CD
+.github/
+ci/
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Lock files (let users manage their own)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment files
+.env
+.env.local
+.env.production
