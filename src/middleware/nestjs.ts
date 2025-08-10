@@ -11,9 +11,9 @@ import * as path from 'path';
 export function createJestSwagModule() {
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { Module, Controller, Get, Res } = require('@nestjs/common');
+    const { Module, Controller, Get, Res, Req } = require('@nestjs/common');
 
-    return { Module, Controller, Get, Res, isAvailable: true };
+    return { Module, Controller, Get, Res, Req, isAvailable: true };
   } catch (error) {
     console.warn(
       'NestJS not available. JestSwagModule requires @nestjs/common as a peer dependency.',
@@ -43,7 +43,7 @@ class JestSwagModuleClass {
       };
     }
 
-    const { Module, Controller, Get, Res } = nestjs;
+    const { Module, Controller, Get, Res, Req } = nestjs;
 
     @Controller()
     class JestSwagController {
@@ -85,9 +85,10 @@ class JestSwagModuleClass {
       }
 
       @Get(['/', '/index.html'])
-      getSwaggerUI(@Res() res: Response) {
-        const specUrl = `${this.options.path || '/api-docs'}/openapi.json`;
-        const html = this.generateSwaggerHTML(specUrl);
+      getSwaggerUI(@Res() res: Response, @Req() req: any) {
+        const basePath = req.baseUrl || `/${this.options.path || 'api-docs'}`;
+        const specUrl = `${basePath}/openapi.json`;
+        const html = this.generateSwaggerHTML(specUrl, basePath);
         res.setHeader('Content-Type', 'text/html');
         return res.send(html);
       }
@@ -113,9 +114,11 @@ class JestSwagModuleClass {
         );
       }
 
-      generateSwaggerHTML(specUrl: string): string {
+      generateSwaggerHTML(
+        specUrl: string,
+        basePath: string = '/api-docs',
+      ): string {
         const title = this.options.title || 'API Documentation';
-        const basePath = `${this.options.path || 'api-docs'}`;
         const defaultOptions = {
           dom_id: '#swagger-ui',
           deepLinking: true,
@@ -135,7 +138,7 @@ class JestSwagModuleClass {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
-    <link rel="stylesheet" type="text/css" href="/${basePath}/swagger-ui.css" />
+    <link rel="stylesheet" type="text/css" href="${basePath}/swagger-ui.css" />
     <style>
         html {
             box-sizing: border-box;
@@ -156,8 +159,8 @@ class JestSwagModuleClass {
 </head>
 <body>
     <div id="swagger-ui"></div>
-    <script src="/${basePath}/swagger-ui-bundle.js"></script>
-    <script src="/${basePath}/swagger-ui-standalone-preset.js"></script>
+    <script src="${basePath}/swagger-ui-bundle.js"></script>
+    <script src="${basePath}/swagger-ui-standalone-preset.js"></script>
     <script>
         window.onload = function() {
             const ui = SwaggerUIBundle(${JSON.stringify(defaultOptions, null, 12)});
