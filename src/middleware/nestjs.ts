@@ -133,6 +133,7 @@ class JestSwagModuleClass {
         const title = this.options.title || 'API Documentation';
         const defaultOptions = {
           dom_id: '#swagger-ui',
+          url: specUrl,
           deepLinking: true,
           presets: [
             'SwaggerUIBundle.presets.apis',
@@ -140,7 +141,9 @@ class JestSwagModuleClass {
           ],
           plugins: ['SwaggerUIBundle.plugins.DownloadUrl'],
           layout: 'StandaloneLayout',
-          url: specUrl,
+          docExpansion: 'list',
+          defaultModelsExpandDepth: 1,
+          defaultModelExpandDepth: 1,
           ...this.options.swaggerOptions,
         };
 
@@ -174,34 +177,58 @@ class JestSwagModuleClass {
     <script src="${basePath}/swagger-ui-bundle.js"></script>
     <script src="${basePath}/swagger-ui-standalone-preset.js"></script>
     <script>
+        let initialized = false;
+        
         function initSwagger() {
+            if (initialized) return;
+            
             if (typeof SwaggerUIBundle === 'undefined') {
-                console.error('❌ SwaggerUIBundle is not loaded');
-                setTimeout(initSwagger, 100); // Retry after 100ms
+                console.log('⏳ Waiting for SwaggerUIBundle...');
+                setTimeout(initSwagger, 200);
                 return;
             }
             
             try {
                 console.log('🚀 Initializing SwaggerUI...');
-                const config = ${JSON.stringify(defaultOptions, null, 16)};
-                console.log('📋 SwaggerUI config:', config);
+                
+                // Simplified configuration
+                const config = {
+                    dom_id: '#swagger-ui',
+                    url: '${specUrl}',
+                    deepLinking: true,
+                    presets: [
+                        SwaggerUIBundle.presets.apis,
+                        SwaggerUIStandalonePreset
+                    ],
+                    plugins: [
+                        SwaggerUIBundle.plugins.DownloadUrl
+                    ],
+                    layout: 'StandaloneLayout',
+                    docExpansion: 'list'
+                };
+                
+                console.log('📋 Config URL:', config.url);
                 
                 const ui = SwaggerUIBundle(config);
+                initialized = true;
                 console.log('✅ SwaggerUI initialized successfully');
             } catch (error) {
                 console.error('❌ SwaggerUI initialization failed:', error);
+                console.error('Full error:', error.stack);
             }
         }
         
-        // Multiple initialization attempts
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initSwagger);
-        } else {
+        // Multiple initialization strategies
+        if (document.readyState === 'complete') {
             initSwagger();
+        } else if (document.readyState === 'interactive') {
+            setTimeout(initSwagger, 100);
+        } else {
+            document.addEventListener('DOMContentLoaded', initSwagger);
         }
         
-        // Fallback timer
-        setTimeout(initSwagger, 500);
+        // Final fallback
+        setTimeout(initSwagger, 1000);
     </script>
 </body>
 </html>`;
