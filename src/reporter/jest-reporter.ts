@@ -55,6 +55,17 @@ export default class JestSwagReporter {
     results: AggregatedResult,
   ): Promise<void> {
     try {
+      // 모든 테스트가 성공했는지 확인
+      const hasFailedTests =
+        results.numFailedTests > 0 ||
+        results.numFailedTestSuites > 0 ||
+        results.numRuntimeErrorTestSuites > 0;
+
+      if (hasFailedTests) {
+        // 실패한 테스트가 있으면 문서 생성 건너뛰기
+        return;
+      }
+
       // Load specs from file system (for cross-process compatibility)
       const fileSpecs = loadSpecsFromFile();
       const allSpecs = [...apiSpecs, ...fileSpecs];

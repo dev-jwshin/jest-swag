@@ -20,7 +20,6 @@ let currentApiSpec: Partial<ApiSpec> = {};
 export const path = (pathUrl: string, callback: () => void): void => {
   const originalSpec = { ...currentApiSpec };
   currentApiSpec.path = pathUrl;
-  process.stdout.write(`🛣️  Setting path: ${pathUrl}\n`);
 
   describe(`Path: ${pathUrl}`, () => {
     callback();
@@ -44,9 +43,6 @@ export const operation = (
     summary: summary,
     responses: {},
   };
-  process.stdout.write(
-    `🚀 Setting operation: ${method.toUpperCase()} ${summary}\n`,
-  );
 
   describe(`${method.toUpperCase()}: ${summary}`, () => {
     callback();
@@ -180,15 +176,8 @@ export const response = (
     security: currentApiSpec.security,
   } as ApiSpec;
 
-  process.stdout.write(
-    `📋 Adding response: ${responseKey} for ${specSnapshot.path} ${specSnapshot.method}\n`,
-  );
-
   // Save the spec immediately if we have enough information
   if (specSnapshot.path && specSnapshot.method) {
-    process.stdout.write(
-      `📝 Collecting API spec: ${specSnapshot.method.toUpperCase()} ${specSnapshot.path}\n`,
-    );
     addApiSpec(specSnapshot);
   }
 
