@@ -86,14 +86,6 @@ class JestSwagModuleClass {
 
       @Get(['/', '/index.html'])
       getSwaggerUI(@Res() res: Response, @Req() req: any) {
-        // 디버깅을 위한 로그
-        console.log('🔍 Request debugging:', {
-          baseUrl: req.baseUrl,
-          originalUrl: req.originalUrl,
-          url: req.url,
-          path: req.path,
-        });
-
         // 요청 URL에서 basePath 추출
         const originalUrl = req.originalUrl || req.url;
         const pathIndex = originalUrl.lastIndexOf(
@@ -107,8 +99,6 @@ class JestSwagModuleClass {
               )
             : `/${this.options.path || 'api-docs'}`;
 
-        console.log('📍 Determined basePath:', basePath);
-
         const specUrl = `${basePath}/openapi.json`;
         const html = this.generateSwaggerHTML(specUrl, basePath);
         res.setHeader('Content-Type', 'text/html');
@@ -117,7 +107,6 @@ class JestSwagModuleClass {
 
       @Get('/swagger-ui.css')
       getSwaggerCSS(@Res() res: Response) {
-        console.log('📄 CSS request received');
         return res.redirect(
           'https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui.css',
         );
@@ -125,7 +114,6 @@ class JestSwagModuleClass {
 
       @Get('/swagger-ui-bundle.js')
       getSwaggerBundle(@Res() res: Response) {
-        console.log('📦 JS bundle request received');
         return res.redirect(
           'https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-bundle.js',
         );
@@ -133,7 +121,6 @@ class JestSwagModuleClass {
 
       @Get('/swagger-ui-standalone-preset.js')
       getSwaggerPreset(@Res() res: Response) {
-        console.log('⚙️ Preset request received');
         return res.redirect(
           'https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-standalone-preset.js',
         );
@@ -187,9 +174,34 @@ class JestSwagModuleClass {
     <script src="${basePath}/swagger-ui-bundle.js"></script>
     <script src="${basePath}/swagger-ui-standalone-preset.js"></script>
     <script>
-        window.onload = function() {
-            const ui = SwaggerUIBundle(${JSON.stringify(defaultOptions, null, 12)});
-        };
+        function initSwagger() {
+            if (typeof SwaggerUIBundle === 'undefined') {
+                console.error('❌ SwaggerUIBundle is not loaded');
+                setTimeout(initSwagger, 100); // Retry after 100ms
+                return;
+            }
+            
+            try {
+                console.log('🚀 Initializing SwaggerUI...');
+                const config = ${JSON.stringify(defaultOptions, null, 16)};
+                console.log('📋 SwaggerUI config:', config);
+                
+                const ui = SwaggerUIBundle(config);
+                console.log('✅ SwaggerUI initialized successfully');
+            } catch (error) {
+                console.error('❌ SwaggerUI initialization failed:', error);
+            }
+        }
+        
+        // Multiple initialization attempts
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSwagger);
+        } else {
+            initSwagger();
+        }
+        
+        // Fallback timer
+        setTimeout(initSwagger, 500);
     </script>
 </body>
 </html>`;
