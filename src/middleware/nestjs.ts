@@ -29,104 +29,106 @@ export interface JestSwagModuleOptions {
 }
 
 /**
- * Create JestSwagModule dynamically when NestJS is available
+ * JestSwagModule for NestJS integration
  */
-export function JestSwagModule() {
-  const nestjs = createJestSwagModule();
+class JestSwagModuleClass {
+  static forRoot(options: JestSwagModuleOptions = {}) {
+    const nestjs = createJestSwagModule();
 
-  if (!nestjs.isAvailable) {
-    return {
-      forRoot: () => ({
+    if (!nestjs.isAvailable) {
+      return {
         module: class {},
         controllers: [],
         providers: [],
-      }),
-    };
-  }
+      };
+    }
 
-  const { Module, Controller, Get, Res } = nestjs;
+    const { Module, Controller, Get, Res } = nestjs;
 
-  @Controller()
-  class JestSwagController {
-    constructor(public readonly options: JestSwagModuleOptions) {}
+    @Controller()
+    class JestSwagController {
+      constructor(public readonly options: JestSwagModuleOptions) {}
 
-    findSpecFile(): string | null {
-      const possiblePaths = [
-        path.resolve('./docs/openapi.json'),
-        path.resolve('./openapi.json'),
-        path.resolve('./dist/docs/openapi.json'),
-      ];
+      findSpecFile(): string | null {
+        const possiblePaths = [
+          path.resolve('./docs/openapi.json'),
+          path.resolve('./openapi.json'),
+          path.resolve('./dist/docs/openapi.json'),
+        ];
 
-      for (const specPath of possiblePaths) {
-        if (fs.existsSync(specPath)) {
-          return specPath;
+        for (const specPath of possiblePaths) {
+          if (fs.existsSync(specPath)) {
+            return specPath;
+          }
+        }
+        return null;
+      }
+
+      @Get('/openapi.json')
+      getOpenApiSpec(@Res() res: Response) {
+        const specPath = this.findSpecFile();
+        if (!specPath) {
+          return res.status(404).json({
+            error:
+              'OpenAPI specification not found. Run your tests with jest-swag reporter first.',
+          });
+        }
+
+        try {
+          const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
+          return res.json(spec);
+        } catch (error) {
+          return res
+            .status(500)
+            .json({ error: 'Failed to load OpenAPI specification' });
         }
       }
-      return null;
-    }
 
-    @Get('/openapi.json')
-    getOpenApiSpec(@Res() res: Response) {
-      const specPath = this.findSpecFile();
-      if (!specPath) {
-        return res.status(404).json({
-          error:
-            'OpenAPI specification not found. Run your tests with jest-swag reporter first.',
-        });
+      @Get(['/', '/index.html'])
+      getSwaggerUI(@Res() res: Response) {
+        const specUrl = `${this.options.path || '/api-docs'}/openapi.json`;
+        const html = this.generateSwaggerHTML(specUrl);
+        res.setHeader('Content-Type', 'text/html');
+        return res.send(html);
       }
 
-      try {
-        const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
-        return res.json(spec);
-      } catch (error) {
-        return res
-          .status(500)
-          .json({ error: 'Failed to load OpenAPI specification' });
+      @Get('/swagger-ui.css')
+      getSwaggerCSS(@Res() res: Response) {
+        return res.redirect(
+          'https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui.css',
+        );
       }
-    }
 
-    @Get(['/', '/index.html'])
-    getSwaggerUI(@Res() res: Response) {
-      const specUrl = `${this.options.path || '/api-docs'}/openapi.json`;
-      const html = this.generateSwaggerHTML(specUrl);
-      res.setHeader('Content-Type', 'text/html');
-      return res.send(html);
-    }
+      @Get('/swagger-ui-bundle.js')
+      getSwaggerBundle(@Res() res: Response) {
+        return res.redirect(
+          'https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-bundle.js',
+        );
+      }
 
-    @Get('/swagger-ui.css')
-    getSwaggerCSS(@Res() res: Response) {
-      return res.redirect(
-        'https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui.css',
-      );
-    }
+      @Get('/swagger-ui-standalone-preset.js')
+      getSwaggerPreset(@Res() res: Response) {
+        return res.redirect(
+          'https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-standalone-preset.js',
+        );
+      }
 
-    @Get('/swagger-ui-bundle.js')
-    getSwaggerBundle(@Res() res: Response) {
-      return res.redirect(
-        'https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-bundle.js',
-      );
-    }
+      generateSwaggerHTML(specUrl: string): string {
+        const title = this.options.title || 'API Documentation';
+        const defaultOptions = {
+          dom_id: '#swagger-ui',
+          deepLinking: true,
+          presets: [
+            'SwaggerUIBundle.presets.apis',
+            'SwaggerUIStandalonePreset',
+          ],
+          plugins: ['SwaggerUIBundle.plugins.DownloadUrl'],
+          layout: 'StandaloneLayout',
+          url: specUrl,
+          ...this.options.swaggerOptions,
+        };
 
-    @Get('/swagger-ui-standalone-preset.js')
-    getSwaggerPreset(@Res() res: Response) {
-      return res.redirect(
-        'https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-standalone-preset.js',
-      );
-    }
-
-    generateSwaggerHTML(specUrl: string): string {
-      const title = this.options.title || 'API Documentation';
-      const defaultOptions = {
-        dom_id: '#swagger-ui',
-        deepLinking: true,
-        presets: ['SwaggerUIBundle.presets.apis', 'SwaggerUIStandalonePreset'],
-        plugins: ['SwaggerUIBundle.plugins.DownloadUrl'],
-        layout: 'StandaloneLayout',
-        url: specUrl,
-        ...this.options.swaggerOptions,
-      };
-
-      return `<!DOCTYPE html>
+        return `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -162,41 +164,37 @@ export function JestSwagModule() {
     </script>
 </body>
 </html>`;
-    }
-  }
-
-  @Module({})
-  class JestSwagModuleClass {
-    static forRoot(options: JestSwagModuleOptions = {}) {
-      const routePath = options.path || 'api-docs';
-
-      // Create controller with custom route
-      const DynamicController = Controller(routePath)(JestSwagController);
-
-      console.log(`📖 Setting up Jest Swag UI at /${routePath}`);
-
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(
-          `🚀 Swagger UI will be available at http://localhost:3000/${routePath}`,
-        );
       }
-
-      return {
-        module: JestSwagModuleClass,
-        controllers: [DynamicController],
-        providers: [
-          {
-            provide: 'JEST_SWAG_OPTIONS',
-            useValue: options,
-          },
-          {
-            provide: JestSwagController,
-            useFactory: () => new JestSwagController(options),
-          },
-        ],
-      };
     }
-  }
 
-  return JestSwagModuleClass;
+    const routePath = options.path || 'api-docs';
+
+    // Create controller with custom route
+    const DynamicController = Controller(routePath)(JestSwagController);
+
+    console.log(`📖 Setting up Jest Swag UI at /${routePath}`);
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(
+        `🚀 Swagger UI will be available at http://localhost:3000/${routePath}`,
+      );
+    }
+
+    return {
+      module: JestSwagModuleClass,
+      controllers: [DynamicController],
+      providers: [
+        {
+          provide: 'JEST_SWAG_OPTIONS',
+          useValue: options,
+        },
+        {
+          provide: JestSwagController,
+          useFactory: () => new JestSwagController(options),
+        },
+      ],
+    };
+  }
 }
+
+export const JestSwagModule = JestSwagModuleClass;
