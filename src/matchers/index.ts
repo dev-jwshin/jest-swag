@@ -107,17 +107,57 @@ export const requestBody = (body: RequestBody): void => {
 export const response = (
   statusCode: number,
   desc: string,
+  options?:
+    | {
+        content?: { [mediaType: string]: { schema: Schema; example?: any } };
+        headers?: {
+          [headerName: string]: { description?: string; schema: Schema };
+        };
+      }
+    | (() => void),
   callback?: () => void,
 ): void => {
   if (!currentApiSpec.responses) {
     currentApiSpec.responses = {};
   }
 
+  // Handle both old and new signatures
+  let responseOptions:
+    | {
+        content?: { [mediaType: string]: { schema: Schema; example?: any } };
+        headers?: {
+          [headerName: string]: { description?: string; schema: Schema };
+        };
+      }
+    | undefined;
+  let testCallback: (() => void) | undefined;
+
+  if (typeof options === 'function') {
+    // Old signature: response(200, 'desc', callback)
+    testCallback = options;
+  } else if (typeof options === 'object') {
+    // New signature: response(200, 'desc', { content, headers }, callback)
+    responseOptions = options;
+    testCallback = callback;
+  }
+
   const responseObj: Response = {
     description: desc,
+    ...(responseOptions?.content && { content: responseOptions.content }),
+    ...(responseOptions?.headers && { headers: responseOptions.headers }),
   };
 
-  currentApiSpec.responses[statusCode.toString()] = responseObj;
+  // Handle duplicate status codes by adding suffix
+  let responseKey = statusCode.toString();
+  let counter = 1;
+
+  // Check if this status code already exists
+  while (currentApiSpec.responses[responseKey]) {
+    responseKey = `${statusCode}-${counter}`;
+    counter++;
+  }
+
+  currentApiSpec.responses[responseKey] = responseObj;
 
   // Capture the spec at this moment (test collection phase)
   const specSnapshot = {
@@ -133,7 +173,7 @@ export const response = (
   } as ApiSpec;
 
   process.stdout.write(
-    `📋 Adding response: ${statusCode} for ${specSnapshot.path} ${specSnapshot.method}\n`,
+    `📋 Adding response: ${responseKey} for ${specSnapshot.path} ${specSnapshot.method}\n`,
   );
 
   // Save the spec immediately if we have enough information
@@ -146,8 +186,8 @@ export const response = (
 
   it(`responds with ${statusCode}`, () => {
     // Test logic can go here
-    if (callback) {
-      callback();
+    if (testCallback) {
+      testCallback();
     }
   });
 };

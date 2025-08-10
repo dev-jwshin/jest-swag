@@ -94,12 +94,33 @@ export class OpenAPIGenerator {
       const pathItem: PathItem = {};
 
       Object.entries(methods).forEach(([method, spec]) => {
+        // Process responses to format duplicate status codes nicely
+        const processedResponses: { [statusCode: string]: any } = {};
+
+        if (spec.responses) {
+          Object.entries(spec.responses).forEach(([key, response]) => {
+            // Convert "200-1" to "200 - 1" for display, but keep original status code logic
+            const displayKey = key.includes('-')
+              ? key.replace('-', ' - ')
+              : key;
+            const actualStatusCode = key.split('-')[0]; // Extract actual HTTP status code
+
+            processedResponses[
+              actualStatusCode +
+                (key.includes('-') ? ` (${key.split('-')[1]})` : '')
+            ] = response;
+          });
+        }
+
         const operation: Operation = {
           summary: spec.summary,
           description: spec.description,
           tags: spec.tags,
           parameters: spec.parameters,
-          responses: spec.responses || { '200': { description: 'Success' } },
+          responses:
+            Object.keys(processedResponses).length > 0
+              ? processedResponses
+              : { '200': { description: 'Success' } },
         };
 
         if (spec.requestBody) {

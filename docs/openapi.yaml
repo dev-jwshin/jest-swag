@@ -15,6 +15,10 @@ paths:
           description: "Bad request"
         "500":
           description: "Internal server error"
+        "200 (1)":
+          description: "Users with pagination info"
+        "200 (2)":
+          description: "Empty user list when no users exist"
     post:
       summary: "Create a new user"
       responses:
