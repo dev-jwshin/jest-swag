@@ -14,7 +14,7 @@ Generate OpenAPI/Swagger documentation directly from your Jest API tests! Inspir
 ## 📦 Installation
 
 ```bash
-npm install jest-swag --save-dev
+npm install @foryourdev/jest-swag --save-dev
 ```
 
 ## 🚀 Framework Integration
@@ -25,10 +25,33 @@ npm install jest-swag --save-dev
 
 ```bash
 cd your-express-project
-npm install jest-swag --save-dev
+npm install @foryourdev/jest-swag --save-dev
 ```
 
-2. **Create API tests:**
+2. **Setup Swagger UI in your Express app:**
+
+```javascript
+// app.js or server.js
+import express from 'express';
+import { setupSwagger } from '@foryourdev/jest-swag';
+
+const app = express();
+
+// Only in development environment
+if (process.env.NODE_ENV !== 'production') {
+  setupSwagger(app, {
+    routePrefix: '/api-docs',
+    title: 'My API Documentation',
+  });
+}
+
+app.listen(3000, () => {
+  console.log('Server running on http://localhost:3000');
+  console.log('API docs available at http://localhost:3000/api-docs');
+});
+```
+
+3. **Create API tests:**
 
 ```typescript
 // tests/api/users.test.ts
@@ -42,7 +65,9 @@ import {
   response,
   jsonContent,
   schemas,
-} from 'jest-swag';
+} from '@foryourdev/jest-swag';
+import request from 'supertest';
+import app from '../app';
 
 describe('Users API', () => {
   path('/api/users', () => {
@@ -58,24 +83,43 @@ describe('Users API', () => {
       });
 
       response(200, 'Users retrieved successfully', () => {
-        // Your actual Express route test
-        // expect(await request(app).get('/api/users')).toBe(200);
+        return request(app).get('/api/users?page=1').expect(200);
       });
     });
   });
 });
 ```
 
-3. **Update package.json:**
+4. **Configure Jest to generate docs:**
 
-```json
-{
-  "scripts": {
-    "test": "jest",
-    "test:docs": "jest --reporters=jest-swag/dist/reporter.js",
-    "docs:serve": "jest-swag serve"
-  }
-}
+```javascript
+// jest.config.js
+module.exports = {
+  testEnvironment: 'node',
+  reporters: [
+    'default',
+    [
+      '@foryourdev/jest-swag/dist/reporter.js',
+      {
+        title: 'My Express API',
+        version: '1.0.0',
+        outputPath: './docs/openapi.json',
+      },
+    ],
+  ],
+};
+```
+
+5. **Run tests and access Swagger UI:**
+
+```bash
+# Run tests to generate documentation
+npm test
+
+# Start your Express server
+npm start
+
+# Access Swagger UI at http://localhost:3000/api-docs
 ```
 
 ### NestJS Project
@@ -84,10 +128,34 @@ describe('Users API', () => {
 
 ```bash
 cd your-nestjs-project
-npm install jest-swag --save-dev
+npm install @foryourdev/jest-swag --save-dev
 ```
 
-2. **Create NestJS API tests:**
+2. **Setup JestSwag module in your NestJS app:**
+
+```typescript
+// app.module.ts
+import { Module } from '@nestjs/common';
+import { JestSwagModule } from '@foryourdev/jest-swag';
+
+@Module({
+  imports: [
+    // Only in development
+    ...(process.env.NODE_ENV !== 'production'
+      ? [
+          JestSwagModule.forRoot({
+            path: 'api-docs',
+            title: 'My NestJS API Documentation',
+          }),
+        ]
+      : []),
+    // ... other imports
+  ],
+})
+export class AppModule {}
+```
+
+3. **Create NestJS API tests:**
 
 ```typescript
 // test/users.e2e-spec.ts
@@ -105,7 +173,7 @@ import {
   response,
   jsonContent,
   schemas,
-} from 'jest-swag';
+} from '@foryourdev/jest-swag';
 
 describe('Users (e2e)', () => {
   let app: INestApplication;
@@ -159,7 +227,7 @@ describe('Users (e2e)', () => {
 });
 ```
 
-3. **Configure Jest:**
+4. **Configure Jest:**
 
 ```javascript
 // jest.config.js
@@ -174,7 +242,7 @@ module.exports = {
   reporters: [
     'default',
     [
-      'jest-swag/dist/reporter.js',
+      '@foryourdev/jest-swag/dist/reporter.js',
       {
         title: 'My NestJS API',
         version: '1.0.0',
@@ -186,6 +254,18 @@ module.exports = {
     ],
   ],
 };
+```
+
+5. **Run tests and access Swagger UI:**
+
+```bash
+# Run e2e tests to generate documentation
+npm run test:e2e
+
+# Start your NestJS application
+npm start
+
+# Access Swagger UI at http://localhost:3000/api-docs
 ```
 
 ## 🎯 Quick Start
@@ -289,19 +369,19 @@ npm test
 # Or run tests specifically for documentation
 npm run test:docs
 
-# Serve the generated documentation
-npx jest-swag serve
+# Start your app server (Express/NestJS)
+npm start
 ```
 
-### 4. View generated documentation
+### 4. Access Swagger UI directly in your app
 
-After running tests, you'll find:
+After running tests and starting your server:
 
-- `docs/openapi.json` - OpenAPI specification
-- `docs/openapi.yaml` - YAML version
-- `docs/index.html` - Interactive Swagger UI
+- **Express**: `http://localhost:3000/api-docs`
+- **NestJS**: `http://localhost:3000/api-docs`
+- **Files**: `docs/openapi.json`, `docs/openapi.yaml`
 
-Open `http://localhost:3001` to view your API documentation in Swagger UI!
+**No need for separate servers!** 🎉 Swagger UI is integrated directly into your application.
 
 ## 📚 API Reference
 

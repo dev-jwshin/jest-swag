@@ -13,3 +13,9 @@ export { OpenAPIGenerator } from './generator/openapi-generator';
 
 // Export reporter for Jest configuration
 export { default as JestSwagReporter } from './reporter/jest-reporter';
+
+// Export Express middleware
+export { setupSwagger, swaggerUI } from './middleware/express';
+
+// Export NestJS module
+export { JestSwagModule } from './middleware/nestjs';

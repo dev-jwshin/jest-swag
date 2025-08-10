@@ -21,14 +21,10 @@
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "test"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test"]
 }
