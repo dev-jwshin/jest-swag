@@ -247,9 +247,18 @@ export const jsonContent = (schema: Schema, example?: any) => ({
 });
 
 /**
- * 응답 데이터로부터 자동으로 스키마 생성
+ * 응답 데이터로부터 자동으로 스키마 생성 (순환 참조 방지)
  */
-function generateSchemaFromResponse(data: any): Schema {
+function generateSchemaFromResponse(
+  data: any,
+  visited = new WeakSet(),
+  depth = 0,
+): Schema {
+  // 최대 깊이 제한 (10레벨)
+  if (depth > 10) {
+    return { type: 'object', description: 'Maximum depth reached' };
+  }
+
   if (data === null) return { type: 'null' };
   if (data === undefined) return {};
 
@@ -271,30 +280,74 @@ function generateSchemaFromResponse(data: any): Schema {
   }
 
   if (Array.isArray(data)) {
-    const items = data.length > 0 ? generateSchemaFromResponse(data[0]) : {};
+    // 순환 참조 검사
+    if (visited.has(data)) {
+      return { type: 'array', description: 'Circular reference detected' };
+    }
+
+    visited.add(data);
+    const items =
+      data.length > 0
+        ? generateSchemaFromResponse(data[0], visited, depth + 1)
+        : {};
+    visited.delete(data);
+
+    // 예제는 첫 번째 요소만 포함 (순환 참조 방지)
+    const safeExample = data.length > 0 ? [data[0]] : [];
+
     return {
       type: 'array',
       items,
-      example: data,
+      example: safeExample,
     };
   }
 
   if (type === 'object') {
+    // 순환 참조 검사
+    if (visited.has(data)) {
+      return { type: 'object', description: 'Circular reference detected' };
+    }
+
+    visited.add(data);
     const properties: { [key: string]: Schema } = {};
     const required: string[] = [];
+    const safeExample: { [key: string]: any } = {};
 
-    Object.keys(data).forEach((key) => {
-      properties[key] = generateSchemaFromResponse(data[key]);
-      if (data[key] !== null && data[key] !== undefined) {
-        required.push(key);
+    // 최대 10개 속성만 처리 (너무 큰 객체 방지)
+    const keys = Object.keys(data).slice(0, 10);
+
+    keys.forEach((key) => {
+      try {
+        properties[key] = generateSchemaFromResponse(
+          data[key],
+          visited,
+          depth + 1,
+        );
+        if (data[key] !== null && data[key] !== undefined) {
+          required.push(key);
+        }
+
+        // 안전한 예제 생성 (순환 참조 객체 제외)
+        if (!visited.has(data[key])) {
+          safeExample[key] = data[key];
+        }
+      } catch (error: any) {
+        // 에러가 발생한 속성은 건너뛰기
+        console.warn(
+          `Failed to process property '${key}':`,
+          error?.message || 'Unknown error',
+        );
+        properties[key] = { type: 'string', description: 'Processing failed' };
       }
     });
+
+    visited.delete(data);
 
     return {
       type: 'object',
       properties,
       required: required.length > 0 ? required : undefined,
-      example: data,
+      example: safeExample,
     };
   }
 

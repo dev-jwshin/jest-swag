@@ -43,6 +43,7 @@ export interface Header {
 export interface Schema {
   type?: string;
   format?: string;
+  description?: string;
   properties?: { [propertyName: string]: Schema };
   items?: Schema;
   required?: string[];
