@@ -86,7 +86,29 @@ class JestSwagModuleClass {
 
       @Get(['/', '/index.html'])
       getSwaggerUI(@Res() res: Response, @Req() req: any) {
-        const basePath = req.baseUrl || `/${this.options.path || 'api-docs'}`;
+        // 디버깅을 위한 로그
+        console.log('🔍 Request debugging:', {
+          baseUrl: req.baseUrl,
+          originalUrl: req.originalUrl,
+          url: req.url,
+          path: req.path,
+        });
+
+        // 요청 URL에서 basePath 추출
+        const originalUrl = req.originalUrl || req.url;
+        const pathIndex = originalUrl.lastIndexOf(
+          `/${this.options.path || 'api-docs'}`,
+        );
+        const basePath =
+          pathIndex !== -1
+            ? originalUrl.substring(
+                0,
+                pathIndex + `/${this.options.path || 'api-docs'}`.length,
+              )
+            : `/${this.options.path || 'api-docs'}`;
+
+        console.log('📍 Determined basePath:', basePath);
+
         const specUrl = `${basePath}/openapi.json`;
         const html = this.generateSwaggerHTML(specUrl, basePath);
         res.setHeader('Content-Type', 'text/html');
@@ -95,6 +117,7 @@ class JestSwagModuleClass {
 
       @Get('/swagger-ui.css')
       getSwaggerCSS(@Res() res: Response) {
+        console.log('📄 CSS request received');
         return res.redirect(
           'https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui.css',
         );
@@ -102,6 +125,7 @@ class JestSwagModuleClass {
 
       @Get('/swagger-ui-bundle.js')
       getSwaggerBundle(@Res() res: Response) {
+        console.log('📦 JS bundle request received');
         return res.redirect(
           'https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-bundle.js',
         );
@@ -109,6 +133,7 @@ class JestSwagModuleClass {
 
       @Get('/swagger-ui-standalone-preset.js')
       getSwaggerPreset(@Res() res: Response) {
+        console.log('⚙️ Preset request received');
         return res.redirect(
           'https://unpkg.com/swagger-ui-dist@5.10.5/swagger-ui-standalone-preset.js',
         );
