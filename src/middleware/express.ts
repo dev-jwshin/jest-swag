@@ -64,7 +64,12 @@ export function swaggerUI(options: SwaggerUIOptions = {}) {
 
   // Serve Swagger UI HTML
   router.get(['/', '/index.html'], (req: Request, res: Response) => {
-    const html = generateSwaggerHTML(specUrl, title, swaggerOptions);
+    const html = generateSwaggerHTML(
+      specUrl,
+      title,
+      swaggerOptions,
+      routePrefix,
+    );
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
   });
@@ -116,6 +121,7 @@ function generateSwaggerHTML(
   specUrl: string,
   title: string,
   swaggerOptions: any,
+  routePrefix: string = '/api-docs',
 ): string {
   const defaultOptions = {
     dom_id: '#swagger-ui',
@@ -133,7 +139,7 @@ function generateSwaggerHTML(
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
-    <link rel="stylesheet" type="text/css" href="./swagger-ui.css" />
+    <link rel="stylesheet" type="text/css" href="${routePrefix}/swagger-ui.css" />
     <style>
         html {
             box-sizing: border-box;
@@ -154,8 +160,8 @@ function generateSwaggerHTML(
 </head>
 <body>
     <div id="swagger-ui"></div>
-    <script src="./swagger-ui-bundle.js"></script>
-    <script src="./swagger-ui-standalone-preset.js"></script>
+    <script src="${routePrefix}/swagger-ui-bundle.js"></script>
+    <script src="${routePrefix}/swagger-ui-standalone-preset.js"></script>
     <script>
         window.onload = function() {
             const ui = SwaggerUIBundle(${JSON.stringify(defaultOptions, null, 12)});

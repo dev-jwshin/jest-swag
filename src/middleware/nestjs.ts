@@ -115,6 +115,7 @@ class JestSwagModuleClass {
 
       generateSwaggerHTML(specUrl: string): string {
         const title = this.options.title || 'API Documentation';
+        const basePath = `${this.options.path || 'api-docs'}`;
         const defaultOptions = {
           dom_id: '#swagger-ui',
           deepLinking: true,
@@ -134,7 +135,7 @@ class JestSwagModuleClass {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
-    <link rel="stylesheet" type="text/css" href="./swagger-ui.css" />
+    <link rel="stylesheet" type="text/css" href="/${basePath}/swagger-ui.css" />
     <style>
         html {
             box-sizing: border-box;
@@ -155,8 +156,8 @@ class JestSwagModuleClass {
 </head>
 <body>
     <div id="swagger-ui"></div>
-    <script src="./swagger-ui-bundle.js"></script>
-    <script src="./swagger-ui-standalone-preset.js"></script>
+    <script src="/${basePath}/swagger-ui-bundle.js"></script>
+    <script src="/${basePath}/swagger-ui-standalone-preset.js"></script>
     <script>
         window.onload = function() {
             const ui = SwaggerUIBundle(${JSON.stringify(defaultOptions, null, 12)});
