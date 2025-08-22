@@ -60,6 +60,7 @@ export interface SecurityRequirement {
 
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 
 // Global storage for API specs with deduplication
 export const apiSpecs: ApiSpec[] = [];
@@ -67,7 +68,27 @@ export const apiSpecs: ApiSpec[] = [];
 // Performance: Cache for spec deduplication
 const specCache = new Map<string, ApiSpec>();
 
-const SPECS_FILE = path.resolve('./.jest-swag-specs.json');
+// Generate unique temp file path
+const getSpecsFilePath = (): string => {
+  const tempDir = os.tmpdir();
+  const projectHash = Math.abs(hashCode(process.cwd())).toString(36);
+  const processId = process.pid;
+  return path.join(tempDir, `jest-swag-specs-${projectHash}-${processId}.json`);
+};
+
+// Simple hash function for project path
+function hashCode(str: string): number {
+  let hash = 0;
+  if (str.length === 0) return hash;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash;
+}
+
+const SPECS_FILE = getSpecsFilePath();
 
 // Flag to control file persistence
 let enableFilePersistence = true;

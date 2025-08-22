@@ -7,6 +7,7 @@
 import { program } from 'commander';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { OpenAPIGenerator } from './generator/openapi-generator';
 import { apiSpecs, clearApiSpecs } from './utils';
 
@@ -64,7 +65,7 @@ program
 
       // For CLI usage, we need to load specs from a temporary file
       // This would typically be saved by the Jest reporter
-      const specsPath = path.resolve('./.jest-swag-specs.json');
+      const specsPath = getTempSpecsFilePath();
       if (fs.existsSync(specsPath)) {
         const savedSpecs = JSON.parse(fs.readFileSync(specsPath, 'utf8'));
         clearApiSpecs();
@@ -84,7 +85,7 @@ program
       cleanupTempFile(specsPath);
     } catch (error) {
       // Clean up temp file on error
-      const specsPath = path.resolve('./.jest-swag-specs.json');
+      const specsPath = getTempSpecsFilePath();
       cleanupTempFile(specsPath);
       process.exit(1);
     }
@@ -140,6 +141,26 @@ program
 // Helper function to collect multiple values
 function collect(value: string, previous: string[]) {
   return previous.concat([value]);
+}
+
+// Generate unique temp file path (same logic as utils)
+function getTempSpecsFilePath(): string {
+  const tempDir = os.tmpdir();
+  const projectHash = Math.abs(hashCode(process.cwd())).toString(36);
+  const processId = process.pid;
+  return path.join(tempDir, `jest-swag-specs-${projectHash}-${processId}.json`);
+}
+
+// Simple hash function for project path
+function hashCode(str: string): number {
+  let hash = 0;
+  if (str.length === 0) return hash;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return hash;
 }
 
 // Helper function to clean up temporary spec file
