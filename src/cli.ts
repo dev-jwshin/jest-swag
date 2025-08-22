@@ -64,7 +64,7 @@ program
 
       // For CLI usage, we need to load specs from a temporary file
       // This would typically be saved by the Jest reporter
-      const specsPath = path.resolve('./jest-swag-specs.json');
+      const specsPath = path.resolve('./.jest-swag-specs.json');
       if (fs.existsSync(specsPath)) {
         const savedSpecs = JSON.parse(fs.readFileSync(specsPath, 'utf8'));
         clearApiSpecs();
@@ -72,12 +72,20 @@ program
       }
 
       if (apiSpecs.length === 0) {
+        // Clean up temp file even if no specs
+        cleanupTempFile(specsPath);
         return;
       }
 
       const generator = new OpenAPIGenerator(config);
       const document = await generator.generate();
+      
+      // Clean up temp file after generation
+      cleanupTempFile(specsPath);
     } catch (error) {
+      // Clean up temp file on error
+      const specsPath = path.resolve('./.jest-swag-specs.json');
+      cleanupTempFile(specsPath);
       process.exit(1);
     }
   });
@@ -132,6 +140,17 @@ program
 // Helper function to collect multiple values
 function collect(value: string, previous: string[]) {
   return previous.concat([value]);
+}
+
+// Helper function to clean up temporary spec file
+function cleanupTempFile(filePath: string): void {
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  } catch (error) {
+    // Ignore errors when cleaning up
+  }
 }
 
 program.parse();

@@ -61,10 +61,18 @@ export class OpenAPIGenerator {
     };
   }
 
+  // Performance: Cache generated documents
+  private documentCache: { specs: ApiSpec[]; document: OpenAPIDocument } | null = null;
+
   /**
    * Generates OpenAPI document from collected API specs
    */
   public generateDocument(): OpenAPIDocument {
+    // Performance: Return cached if specs haven't changed
+    if (this.documentCache && this.areSpecsEqual(this.documentCache.specs, apiSpecs)) {
+      return this.documentCache.document;
+    }
+
     const document: OpenAPIDocument = {
       openapi: '3.0.3',
       info: {
@@ -79,37 +87,41 @@ export class OpenAPIGenerator {
       document.servers = this.config.servers;
     }
 
-    // Group specs by path and method
-    const pathGroups: { [path: string]: { [method: string]: ApiSpec } } = {};
+    // Performance: Use Map for faster lookups
+    const pathGroups = new Map<string, Map<string, ApiSpec>>();
 
-    apiSpecs.forEach((spec) => {
-      if (!pathGroups[spec.path]) {
-        pathGroups[spec.path] = {};
+    // Performance: Single pass grouping
+    for (let i = 0; i < apiSpecs.length; i++) {
+      const spec = apiSpecs[i];
+      if (!pathGroups.has(spec.path)) {
+        pathGroups.set(spec.path, new Map());
       }
-      pathGroups[spec.path][spec.method] = spec;
-    });
+      pathGroups.get(spec.path)!.set(spec.method, spec);
+    }
 
     // Convert to OpenAPI format
-    Object.entries(pathGroups).forEach(([pathName, methods]) => {
+    pathGroups.forEach((methods, pathName) => {
       const pathItem: PathItem = {};
 
-      Object.entries(methods).forEach(([method, spec]) => {
+      methods.forEach((spec, method) => {
         // Process responses to format duplicate status codes nicely
         const processedResponses: { [statusCode: string]: any } = {};
 
         if (spec.responses) {
-          Object.entries(spec.responses).forEach(([key, response]) => {
-            // Convert "200-1" to "200 - 1" for display, but keep original status code logic
-            const displayKey = key.includes('-')
-              ? key.replace('-', ' - ')
-              : key;
-            const actualStatusCode = key.split('-')[0]; // Extract actual HTTP status code
+          const responseKeys = Object.keys(spec.responses);
+          for (let i = 0; i < responseKeys.length; i++) {
+            const key = responseKeys[i];
+            const response = spec.responses[key];
+            
+            // Performance: Pre-compile regex patterns
+            const hasDash = key.indexOf('-') !== -1;
+            const actualStatusCode = hasDash ? key.substring(0, key.indexOf('-')) : key;
 
             processedResponses[
               actualStatusCode +
-                (key.includes('-') ? ` (${key.split('-')[1]})` : '')
+                (hasDash ? ` (${key.substring(key.indexOf('-') + 1)})` : '')
             ] = response;
-          });
+          }
         }
 
         const operation: Operation = {
@@ -137,7 +149,24 @@ export class OpenAPIGenerator {
       document.paths[pathName] = pathItem;
     });
 
+    // Cache the generated document
+    this.documentCache = { specs: [...apiSpecs], document };
+
     return document;
+  }
+
+  // Performance: Efficient spec comparison
+  private areSpecsEqual(specs1: ApiSpec[], specs2: ApiSpec[]): boolean {
+    if (specs1.length !== specs2.length) return false;
+    
+    // Quick comparison using stringification
+    // Note: This assumes specs are in the same order
+    for (let i = 0; i < specs1.length; i++) {
+      if (JSON.stringify(specs1[i]) !== JSON.stringify(specs2[i])) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**

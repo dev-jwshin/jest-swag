@@ -271,62 +271,80 @@ function extractSafeHeaders(headers: any): any {
   if (!headers || typeof headers !== 'object') return {};
 
   const safeHeaders: { [key: string]: any } = {};
-  Object.keys(headers).forEach((key) => {
+  const keys = Object.keys(headers);
+  
+  // Performance: Use for loop
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
     const value = headers[key];
     if (typeof value === 'string' || typeof value === 'number') {
       safeHeaders[key] = value;
     }
-  });
+  }
 
   return safeHeaders;
 }
 
+// Performance optimization: Create Set once for faster lookup
+const DANGEROUS_KEYS = new Set([
+  'req',
+  'request',
+  'socket',
+  'connection',
+  'agent',
+  'xhr',
+  '_httpMessage',
+  'res',
+  'response',
+  'client',
+  'parser',
+]);
+
 /**
  * 브라우저/Node.js 특정 객체들 제거
  */
-function removeBrowserObjects(obj: any): any {
+function removeBrowserObjects(obj: any, visited = new WeakSet()): any {
   if (obj === null || obj === undefined) return obj;
 
   const type = typeof obj;
   if (type !== 'object') return obj;
 
-  // 순환 참조나 브라우저 객체들 필터링
-  const dangerousKeys = [
-    'req',
-    'request',
-    'socket',
-    'connection',
-    'agent',
-    'xhr',
-    '_httpMessage',
-    'res',
-    'response',
-    'client',
-    'parser',
-  ];
+  // Performance: Check circular reference early
+  if (visited.has(obj)) return undefined;
+  visited.add(obj);
 
   if (Array.isArray(obj)) {
-    return obj.map((item) => removeBrowserObjects(item));
+    const result = obj.map((item) => removeBrowserObjects(item, visited));
+    visited.delete(obj);
+    return result;
   }
 
   const cleaned: { [key: string]: any } = {};
-  Object.keys(obj).forEach((key) => {
-    if (!dangerousKeys.includes(key) && !key.startsWith('_')) {
+  const keys = Object.keys(obj);
+  
+  // Performance: Use for loop instead of forEach
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    if (!DANGEROUS_KEYS.has(key) && !key.startsWith('_')) {
       try {
         const value = obj[key];
         if (value !== null && typeof value === 'object') {
-          // 간단한 순환 참조 체크
-          if (value === obj) return; // self reference
+          // Skip self-reference
+          if (value === obj) continue;
         }
-        cleaned[key] = removeBrowserObjects(value);
+        cleaned[key] = removeBrowserObjects(value, visited);
       } catch (error) {
         // 접근할 수 없는 속성은 건너뛰기
       }
     }
-  });
-
+  }
+  
+  visited.delete(obj);
   return cleaned;
 }
+
+// Performance: Cache schema generation for identical objects
+const schemaCache = new WeakMap<any, Schema>();
 
 /**
  * 응답 데이터로부터 자동으로 스키마 생성 (순환 참조 방지)
@@ -336,7 +354,7 @@ function generateSchemaFromResponse(
   visited = new WeakSet(),
   depth = 0,
 ): Schema {
-  // 최대 깊이 제한 (10레벨)
+  // Performance: Early return for max depth
   if (depth > 10) {
     return { type: 'object', description: 'Maximum depth reached' };
   }
@@ -346,8 +364,9 @@ function generateSchemaFromResponse(
 
   const type = typeof data;
 
-  if (type === 'boolean') {
-    return { type: 'boolean', example: data };
+  // Performance: Handle primitives first (most common)
+  if (type === 'string') {
+    return { type: 'string', example: data };
   }
 
   if (type === 'number') {
@@ -357,8 +376,13 @@ function generateSchemaFromResponse(
     };
   }
 
-  if (type === 'string') {
-    return { type: 'string', example: data };
+  if (type === 'boolean') {
+    return { type: 'boolean', example: data };
+  }
+
+  // Performance: Check cache for complex objects
+  if (schemaCache.has(data)) {
+    return schemaCache.get(data)!;
   }
 
   if (Array.isArray(data)) {
@@ -372,16 +396,17 @@ function generateSchemaFromResponse(
       data.length > 0
         ? generateSchemaFromResponse(data[0], visited, depth + 1)
         : {};
-    visited.delete(data);
-
-    // 예제는 첫 번째 요소만 포함 (순환 참조 방지)
-    const safeExample = data.length > 0 ? [data[0]] : [];
-
-    return {
+    
+    // Performance: Create minimal example
+    const schema: Schema = {
       type: 'array',
       items,
-      example: safeExample,
+      example: data.length > 0 ? [data[0]] : [],
     };
+    
+    visited.delete(data);
+    schemaCache.set(data, schema);
+    return schema;
   }
 
   if (type === 'object') {
@@ -395,39 +420,42 @@ function generateSchemaFromResponse(
     const required: string[] = [];
     const safeExample: { [key: string]: any } = {};
 
-    // 최대 10개 속성만 처리 (너무 큰 객체 방지)
-    const keys = Object.keys(data).slice(0, 10);
+    // Performance: Get keys once and limit to 10
+    const keys = Object.keys(data);
+    const keysToProcess = Math.min(keys.length, 10);
 
-    keys.forEach((key) => {
+    // Performance: Use for loop instead of forEach
+    for (let i = 0; i < keysToProcess; i++) {
+      const key = keys[i];
       try {
+        const value = data[key];
         properties[key] = generateSchemaFromResponse(
-          data[key],
+          value,
           visited,
           depth + 1,
         );
-        if (data[key] !== null && data[key] !== undefined) {
+        if (value !== null && value !== undefined) {
           required.push(key);
-        }
-
-        // 안전한 예제 생성 (순환 참조 객체 제외)
-        if (!visited.has(data[key])) {
-          safeExample[key] = data[key];
+          // Performance: Only add to example if not visited
+          if (!visited.has(value)) {
+            safeExample[key] = value;
+          }
         }
       } catch (error: any) {
-        // 에러가 발생한 속성은 건너뛰기
-
         properties[key] = { type: 'string', description: 'Processing failed' };
       }
-    });
+    }
 
-    visited.delete(data);
-
-    return {
+    const schema: Schema = {
       type: 'object',
       properties,
       required: required.length > 0 ? required : undefined,
       example: safeExample,
     };
+
+    visited.delete(data);
+    schemaCache.set(data, schema);
+    return schema;
   }
 
   return {};

@@ -61,20 +61,65 @@ export interface SecurityRequirement {
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Global storage for API specs
+// Global storage for API specs with deduplication
 export const apiSpecs: ApiSpec[] = [];
+
+// Performance: Cache for spec deduplication
+const specCache = new Map<string, ApiSpec>();
 
 const SPECS_FILE = path.resolve('./.jest-swag-specs.json');
 
-export const addApiSpec = (spec: ApiSpec): void => {
-  apiSpecs.push(spec);
+// Flag to control file persistence
+let enableFilePersistence = true;
 
-  // Also save to file system for cross-process access
-  saveSpecsToFile();
+// Performance: Generate unique key for spec
+function getSpecKey(spec: ApiSpec): string {
+  return `${spec.path}:${spec.method}:${spec.summary || ''}`;
+}
+
+export const disableFilePersistence = (): void => {
+  enableFilePersistence = false;
+};
+
+export const enableFilePersistenceMode = (): void => {
+  enableFilePersistence = true;
+};
+
+export const addApiSpec = (spec: ApiSpec): void => {
+  const key = getSpecKey(spec);
+  
+  // Performance: Skip duplicate specs
+  if (specCache.has(key)) {
+    const existing = specCache.get(key)!;
+    // Update if the new spec has more information
+    if (JSON.stringify(spec).length > JSON.stringify(existing).length) {
+      const index = apiSpecs.indexOf(existing);
+      if (index !== -1) {
+        apiSpecs[index] = spec;
+      }
+      specCache.set(key, spec);
+    }
+    return;
+  }
+  
+  apiSpecs.push(spec);
+  specCache.set(key, spec);
+
+  // Only persist to file if enabled
+  if (enableFilePersistence) {
+    scheduleSaveSpecsToFile();
+  }
 };
 
 export const clearApiSpecs = (): void => {
   apiSpecs.length = 0;
+  specCache.clear();
+  
+  // Cancel pending save operations
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
+  }
 
   // Clear file system cache
   if (fs.existsSync(SPECS_FILE)) {
@@ -82,17 +127,101 @@ export const clearApiSpecs = (): void => {
   }
 };
 
+// Performance: Batch file writes with debouncing
+let saveTimeout: NodeJS.Timeout | null = null;
+let isCleaningUp = false;
+
+function scheduleSaveSpecsToFile(): void {
+  // Don't schedule saves during cleanup
+  if (isCleaningUp) return;
+  
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+  
+  // Debounce writes by 100ms
+  saveTimeout = setTimeout(() => {
+    if (!isCleaningUp) {
+      saveSpecsToFile();
+    }
+    saveTimeout = null;
+  }, 100);
+}
+
+// Export function to stop file writes during cleanup
+export const stopFileWrites = (): void => {
+  isCleaningUp = true;
+  enableFilePersistence = false;
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
+  }
+};
+
+export const resumeFileWrites = (): void => {
+  isCleaningUp = false;
+  enableFilePersistence = true;
+};
+
+// Function to cleanup temp file with delay to ensure all writes are done
+export const cleanupTempSpecFile = (): void => {
+  stopFileWrites();
+  
+  // Clear any pending writes immediately
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
+  }
+  
+  // Delete file with a small delay to ensure all async operations are done
+  setTimeout(() => {
+    if (fs.existsSync(SPECS_FILE)) {
+      try {
+        fs.unlinkSync(SPECS_FILE);
+      } catch (error) {
+        // Ignore errors
+      }
+    }
+  }, 200); // 200ms delay to ensure all writes are complete
+};
+
 export const saveSpecsToFile = (): void => {
   try {
-    fs.writeFileSync(SPECS_FILE, JSON.stringify(apiSpecs, null, 2));
+    // Performance: Only write if there are specs and persistence is enabled
+    if (apiSpecs.length > 0 && enableFilePersistence && !isCleaningUp) {
+      fs.writeFileSync(SPECS_FILE, JSON.stringify(apiSpecs, null, 2));
+    }
   } catch (error) {}
 };
+
+// Performance: Cache file reads
+let lastFileRead: { mtime: Date; specs: ApiSpec[] } | null = null;
 
 export const loadSpecsFromFile = (): ApiSpec[] => {
   try {
     if (fs.existsSync(SPECS_FILE)) {
+      const stats = fs.statSync(SPECS_FILE);
+      
+      // Performance: Return cached if file hasn't changed
+      if (lastFileRead && stats.mtime.getTime() === lastFileRead.mtime.getTime()) {
+        return lastFileRead.specs;
+      }
+      
       const data = fs.readFileSync(SPECS_FILE, 'utf8');
-      return JSON.parse(data);
+      const specs = JSON.parse(data) as ApiSpec[];
+      
+      // Update cache
+      lastFileRead = { mtime: stats.mtime, specs };
+      
+      // Update in-memory cache
+      specs.forEach(spec => {
+        const key = getSpecKey(spec);
+        if (!specCache.has(key)) {
+          specCache.set(key, spec);
+        }
+      });
+      
+      return specs;
     }
   } catch (error) {}
   return [];
