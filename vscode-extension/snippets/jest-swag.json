@@ -1,0 +1,179 @@
+{
+  "Jest Swag Path": {
+    "prefix": "jspath",
+    "body": [
+      "path('${1:/api/endpoint}', () => {",
+      "\t$0",
+      "});"
+    ],
+    "description": "Create a Jest Swag path block"
+  },
+  "Jest Swag GET": {
+    "prefix": "jsget",
+    "body": [
+      "get('${1:Get resource}', () => {",
+      "\tresponse(200, '${2:Success}', () => {",
+      "\t\treturn request(app)",
+      "\t\t\t.get('${3:/api/endpoint}')",
+      "\t\t\t.expect(200);",
+      "\t});",
+      "});"
+    ],
+    "description": "Create a GET operation with response"
+  },
+  "Jest Swag POST": {
+    "prefix": "jspost",
+    "body": [
+      "post('${1:Create resource}', () => {",
+      "\trequestBody({",
+      "\t\trequired: true,",
+      "\t\tcontent: {",
+      "\t\t\t'application/json': {",
+      "\t\t\t\tschema: {",
+      "\t\t\t\t\ttype: 'object',",
+      "\t\t\t\t\trequired: ['${2:field}'],",
+      "\t\t\t\t\tproperties: {",
+      "\t\t\t\t\t\t${2:field}: { type: 'string' }",
+      "\t\t\t\t\t}",
+      "\t\t\t\t}",
+      "\t\t\t}",
+      "\t\t}",
+      "\t});",
+      "\t",
+      "\tresponse(201, '${3:Created}', () => {",
+      "\t\treturn request(app)",
+      "\t\t\t.post('${4:/api/endpoint}')",
+      "\t\t\t.send({ ${2:field}: '${5:value}' })",
+      "\t\t\t.expect(201);",
+      "\t});",
+      "});"
+    ],
+    "description": "Create a POST operation with request body and response"
+  },
+  "Jest Swag Parameter": {
+    "prefix": "jsparam",
+    "body": [
+      "parameter({",
+      "\tname: '${1:paramName}',",
+      "\tin: '${2|query,path,header|}',",
+      "\tschema: { type: '${3|string,integer,number,boolean|}' },",
+      "\tdescription: '${4:Parameter description}',",
+      "\trequired: ${5|false,true|}",
+      "});"
+    ],
+    "description": "Add a parameter to the operation"
+  },
+  "Jest Swag Response": {
+    "prefix": "jsresponse",
+    "body": [
+      "response(${1:200}, '${2:Success}', () => {",
+      "\treturn request(app)",
+      "\t\t.${3|get,post,put,patch,delete|}('${4:/api/endpoint}')",
+      "\t\t.expect(${1:200});",
+      "});"
+    ],
+    "description": "Add a response to the operation"
+  },
+  "Jest Swag Request Body": {
+    "prefix": "jsbody",
+    "body": [
+      "requestBody({",
+      "\trequired: ${1|true,false|},",
+      "\tcontent: {",
+      "\t\t'application/json': {",
+      "\t\t\tschema: {",
+      "\t\t\t\ttype: 'object',",
+      "\t\t\t\trequired: ['${2:field}'],",
+      "\t\t\t\tproperties: {",
+      "\t\t\t\t\t${2:field}: { type: '${3|string,integer,number,boolean,array,object|}' }",
+      "\t\t\t\t}",
+      "\t\t\t}",
+      "\t\t}",
+      "\t}",
+      "});"
+    ],
+    "description": "Add a request body to the operation"
+  },
+  "Jest Swag Common Responses": {
+    "prefix": "jscommon",
+    "body": [
+      "import { commonResponses, authRequired } from '@foryourdev/jest-swag';",
+      "",
+      "// Add common error responses",
+      "...commonResponses.errors;",
+      "",
+      "// Add auth responses",
+      "...authRequired();"
+    ],
+    "description": "Import and use common response helpers"
+  },
+  "Jest Swag Pagination": {
+    "prefix": "jspagination",
+    "body": [
+      "import { paginated, paginatedResponse } from '@foryourdev/jest-swag';",
+      "",
+      "// Add pagination parameters",
+      "...paginated();",
+      "",
+      "// Paginated response",
+      "response(200, 'Success', paginatedResponse(200, 'List of items', {",
+      "\ttype: 'object',",
+      "\tproperties: {",
+      "\t\tid: { type: 'string' },",
+      "\t\tname: { type: 'string' }",
+      "\t}",
+      "}));"
+    ],
+    "description": "Add pagination support"
+  },
+  "Jest Swag Full Test": {
+    "prefix": "jsfull",
+    "body": [
+      "import { path, get, post, response, parameter, requestBody } from '@foryourdev/jest-swag';",
+      "import request from 'supertest';",
+      "import app from '${1:../src/app}';",
+      "",
+      "path('${2:/api/resource}', () => {",
+      "\tget('${3:Get all resources}', () => {",
+      "\t\tparameter({",
+      "\t\t\tname: 'limit',",
+      "\t\t\tin: 'query',",
+      "\t\t\tschema: { type: 'integer', default: 10 },",
+      "\t\t\tdescription: 'Maximum number of items'",
+      "\t\t});",
+      "\t\t",
+      "\t\tresponse(200, 'Success', () => {",
+      "\t\t\treturn request(app)",
+      "\t\t\t\t.get('${2:/api/resource}')",
+      "\t\t\t\t.expect(200);",
+      "\t\t});",
+      "\t});",
+      "\t",
+      "\tpost('${4:Create resource}', () => {",
+      "\t\trequestBody({",
+      "\t\t\trequired: true,",
+      "\t\t\tcontent: {",
+      "\t\t\t\t'application/json': {",
+      "\t\t\t\t\tschema: {",
+      "\t\t\t\t\t\ttype: 'object',",
+      "\t\t\t\t\t\trequired: ['name'],",
+      "\t\t\t\t\t\tproperties: {",
+      "\t\t\t\t\t\t\tname: { type: 'string' }",
+      "\t\t\t\t\t\t}",
+      "\t\t\t\t\t}",
+      "\t\t\t\t}",
+      "\t\t\t}",
+      "\t\t});",
+      "\t\t",
+      "\t\tresponse(201, 'Created', () => {",
+      "\t\t\treturn request(app)",
+      "\t\t\t\t.post('${2:/api/resource}')",
+      "\t\t\t\t.send({ name: 'Test' })",
+      "\t\t\t\t.expect(201);",
+      "\t\t});",
+      "\t});",
+      "});"
+    ],
+    "description": "Complete Jest Swag test example"
+  }
+}

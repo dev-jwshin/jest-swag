@@ -1,0 +1,27 @@
+# Dockerfile for serving jest-swag documentation
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --only=production
+
+# Copy documentation files
+COPY docs/ ./docs/
+
+# Copy CLI for serving
+COPY dist/cli.js ./dist/
+
+# Expose port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3001/openapi.json', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"
+
+# Start the documentation server
+CMD ["node", "dist/cli.js", "serve", "--port", "3001"]

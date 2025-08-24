@@ -1,0 +1,159 @@
+{
+  "name": "jest-swag-vscode",
+  "displayName": "Jest Swag - API Documentation Generator",
+  "description": "Generate OpenAPI documentation from Jest tests directly in VS Code",
+  "version": "0.1.0",
+  "publisher": "jest-swag",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Testing",
+    "Other",
+    "Snippets"
+  ],
+  "keywords": [
+    "jest",
+    "openapi",
+    "swagger",
+    "api",
+    "documentation",
+    "testing"
+  ],
+  "icon": "icon.png",
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:javascript",
+    "onCommand:jestSwag.generateDocs",
+    "onCommand:jestSwag.previewDocs",
+    "onCommand:jestSwag.runTests",
+    "workspaceContains:**/*.test.ts",
+    "workspaceContains:**/*.test.js",
+    "workspaceContains:**/*.spec.ts",
+    "workspaceContains:**/*.spec.js"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "jestSwag.generateDocs",
+        "title": "Generate API Documentation",
+        "category": "Jest Swag"
+      },
+      {
+        "command": "jestSwag.previewDocs",
+        "title": "Preview API Documentation",
+        "category": "Jest Swag"
+      },
+      {
+        "command": "jestSwag.runTests",
+        "title": "Run API Tests",
+        "category": "Jest Swag"
+      },
+      {
+        "command": "jestSwag.watchMode",
+        "title": "Start Watch Mode",
+        "category": "Jest Swag"
+      },
+      {
+        "command": "jestSwag.init",
+        "title": "Initialize Jest Swag",
+        "category": "Jest Swag"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceExtname =~ /\\.(test|spec)\\.(ts|js)$/",
+          "command": "jestSwag.runTests",
+          "group": "jestSwag"
+        },
+        {
+          "when": "resourceExtname =~ /\\.(test|spec)\\.(ts|js)$/",
+          "command": "jestSwag.generateDocs",
+          "group": "jestSwag"
+        }
+      ],
+      "explorer/context": [
+        {
+          "when": "resourceExtname =~ /\\.(test|spec)\\.(ts|js)$/",
+          "command": "jestSwag.runTests",
+          "group": "jestSwag"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Jest Swag",
+      "properties": {
+        "jestSwag.outputPath": {
+          "type": "string",
+          "default": "./docs/openapi.json",
+          "description": "Output path for generated OpenAPI documentation"
+        },
+        "jestSwag.autoGenerate": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically generate documentation after running tests"
+        },
+        "jestSwag.watchMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable watch mode for automatic regeneration"
+        },
+        "jestSwag.serverPort": {
+          "type": "number",
+          "default": 3001,
+          "description": "Port for documentation preview server"
+        },
+        "jestSwag.showNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show notifications for documentation generation"
+        }
+      }
+    },
+    "snippets": [
+      {
+        "language": "typescript",
+        "path": "./snippets/jest-swag.json"
+      },
+      {
+        "language": "javascript",
+        "path": "./snippets/jest-swag.json"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "jestSwag.generateDocs",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
+        "when": "editorTextFocus && resourceExtname =~ /\\.(test|spec)\\.(ts|js)$/"
+      },
+      {
+        "command": "jestSwag.previewDocs",
+        "key": "ctrl+shift+p",
+        "mac": "cmd+shift+p",
+        "when": "editorTextFocus"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.74.0",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "eslint": "^8.28.0",
+    "typescript": "^4.9.3"
+  },
+  "dependencies": {
+    "@foryourdev/jest-swag": "^1.0.0"
+  }
+}

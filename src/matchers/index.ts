@@ -366,6 +366,48 @@ function generateSchemaFromResponse(
 
   // Performance: Handle primitives first (most common)
   if (type === 'string') {
+    const str = data as string;
+    
+    // Enhanced string format detection
+    // Email detection
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str)) {
+      return { type: 'string', format: 'email', example: data };
+    }
+    
+    // UUID detection
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str)) {
+      return { type: 'string', format: 'uuid', example: data };
+    }
+    
+    // Date/DateTime detection
+    if (!isNaN(Date.parse(str))) {
+      // Check if it looks like a date
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+        return { type: 'string', format: 'date', example: data };
+      }
+      if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(str)) {
+        return { type: 'string', format: 'date-time', example: data };
+      }
+    }
+    
+    // URL detection
+    try {
+      new URL(str);
+      return { type: 'string', format: 'uri', example: data };
+    } catch {
+      // Not a URL
+    }
+    
+    // IPv4 detection
+    if (/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(str)) {
+      return { type: 'string', format: 'ipv4', example: data };
+    }
+    
+    // IPv6 detection (simplified pattern)
+    if (/^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|::1|::)$/.test(str)) {
+      return { type: 'string', format: 'ipv6', example: data };
+    }
+    
     return { type: 'string', example: data };
   }
 

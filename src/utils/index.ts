@@ -52,6 +52,10 @@ export interface Schema {
   allOf?: Schema[];
   oneOf?: Schema[];
   anyOf?: Schema[];
+  minimum?: number;
+  maximum?: number;
+  pattern?: string;
+  default?: any;
 }
 
 export interface SecurityRequirement {
